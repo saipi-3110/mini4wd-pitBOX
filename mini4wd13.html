@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ミニ四駆総合ピットアプリ</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding-bottom: 50px; }
+        .container { max-width: 896px; margin: 0 auto; padding: 24px 16px; }
+        header { background-color: #0f172a; color: white; padding: 16px; border-radius: 12px; border-bottom: 4px solid #dc2626; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        h1 { margin: 0; font-size: 24px; font-weight: 900; tracking: 1px; }
+        .tab-container { display: flex; background-color: #1e293b; padding: 4px; border-radius: 8px; border: 1px solid #334155; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .tab-btn { background: none; border: none; color: #94a3b8; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        .tab-btn.active { background-color: #dc2626; color: white; }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+        @media (min-width: 768px) { .grid { grid-template-columns: 1fr 2fr; } }
+        
+        .single-layout { max-width: 500px; margin: 0 auto; }
+        .card { background: white; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; height: fit-content; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: bold; color: #64748b; margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; font-size: 14px; outline: none; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.2); }
+        
+        /* 写真アップロード */
+        .file-input-wrapper { display: block; text-align: center; border: 2px dashed #cbd5e1; padding: 12px; border-radius: 8px; cursor: pointer; background: #f8fafc; font-size: 13px; font-weight: bold; color: #64748b; transition: 0.2s; }
+        .file-input-wrapper:hover { border-color: #dc2626; background: #fff5f5; color: #dc2626; }
+        .file-input-wrapper input[type="file"] { display: none; }
+        .image-preview-thumbnail { width: 100%; max-height: 120px; object-fit: cover; border-radius: 6px; margin-top: 8px; display: none; border: 1px solid #e2e8f0; }
+
+        .radio-tile-group { display: flex; gap: 12px; margin-bottom: 12px; }
+        .radio-tile-label { flex: 1; text-align: center; background: white; border: 2px solid #cbd5e1; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .radio-tile-group input[type="radio"] { display: none; }
+        .radio-tile-group input[value="完走"]:checked + .radio-tile-label { border-color: #10b981; color: #10b981; background-color: #ecfdf5; }
+        .radio-tile-group input[value="CO"]:checked + .radio-tile-label { border-color: #ef4444; color: #ef4444; background-color: #fef2f2; }
+
+        .btn { width: 100%; border: none; color: white; font-weight: bold; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn-red { background-color: #dc2626; }
+        .btn-blue { background-color: #2563eb; }
+        .btn-green { background-color: #10b981; }
+        .btn-purple { background-color: #7c3aed; }
+        .btn:hover { opacity: 0.9; }
+        
+        .list-title { font-size: 18px; font-weight: bold; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; }
+        .empty-state { background: white; padding: 48px; text-align: center; border-radius: 16px; border: 2px dashed #cbd5e1; color: #94a3b8; font-size: 14px; }
+        
+        /* カード共通 */
+        .item-box { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .item-header { background-color: #1e293b; color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .card-img-box { width: 100%; max-height: 240px; overflow: hidden; background: #e2e8f0; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: center; align-items: center; }
+        .card-img { width: 100%; height: 240px; object-fit: cover; }
+        .item-body { padding: 16px; font-size: 14px; }
+        
+        .part-card-body { padding: 16px; display: flex; justify-content: space-between; align-items: center; background: white; }
+        .badge { background-color: #dc2626; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
+        .badge-cat { background-color: #cbd5e1; color: #1e293b; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+        .badge-success { background-color: #10b981; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+        .badge-danger { background-color: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+        
+        .delete-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; }
+        .delete-btn:hover { color: #f87171; }
+        .info-row { margin-bottom: 12px; display: flex; align-items: center; }
+        .info-label { font-weight: bold; color: #64748b; width: 80px; }
+        .motor-tag { background-color: #fef3c7; color: #92400e; font-weight: 500; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .time-display { font-size: 20px; font-weight: bold; font-family: monospace; color: #0f172a; }
+        .memo-box { background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 8px; border-radius: 6px; color: #475569; white-space: pre-wrap; margin-top: 4px; }
+        
+        .counter { display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background-color: #f8fafc; }
+        .count-btn { background: white; border: none; padding: 6px 12px; font-weight: bold; cursor: pointer; color: #475569; font-size: 14px; }
+        .count-num { padding: 0 16px; font-family: monospace; font-weight: bold; min-width: 30px; text-align: center; }
+        .date-text { font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: right; }
+        .hidden { display: none !important; }
+
+        /* 統計 */
+        .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        @media (min-width: 480px) { .stats-container { grid-template-columns: repeat(4, 1fr); } }
+        .stat-card { background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; }
+        .stat-card.highlight { border-color: #10b981; background-color: #f0fdf4; }
+        .stat-val { font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 4px; font-family: monospace; }
+        .stat-card.highlight .stat-val { color: #16a34a; font-size: 24px; }
+        .stat-lbl { font-size: 11px; font-weight: bold; color: #64748b; }
+
+        /* レースシグナル */
+        .signal-card { background: #1e293b; padding: 32px 24px; border-radius: 24px; text-align: center; margin-top: 20px; }
+        .signal-box { display: flex; justify-content: center; gap: 32px; margin-bottom: 24px; background: #0f172a; padding: 24px; border-radius: 100px; border: 3px solid #334155; }
+        .light { width: 60px; height: 60px; border-radius: 50px; background-color: #334155; box-shadow: inset 0 5px 8px rgba(0,0,0,0.8); }
+        .light.red { background-color: #ef4444; box-shadow: 0 0 30px #ef4444, inset 0 4px 4px rgba(255,255,255,0.5); }
+        .light.green { background-color: #10b981; box-shadow: 0 0 30px #10b981, inset 0 4px 4px rgba(255,255,255,0.5); }
+        .signal-btn { background: #dc2626; border: none; color: white; padding: 16px 32px; border-radius: 30px; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 6px #b91c1c; width: 100%; letter-spacing: 2px; margin-bottom: 24px; }
+        .signal-btn:active { transform: translateY(3px); box-shadow: 0 3px #991b1b; }
+        .signal-btn:disabled { background: #475569; box-shadow: none; cursor: not-allowed; transform: none; }
+        .sw-display { background: #0f172a; border: 2px solid #334155; border-radius: 16px; padding: 20px; color: #60a5fa; font-family: monospace; font-size: 48px; font-weight: bold; text-align: center; }
+        .sw-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .sw-btn { border: none; color: white; font-weight: bold; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 16px; }
+        .sw-btn-stop { background-color: #ef4444; box-shadow: 0 4px #b91c1c; }
+        .sw-btn-reset { background-color: #64748b; box-shadow: 0 4px #475569; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>🏎️ MINI 4WD GARAGE</h1>
+            <div class="tab-container">
+                <button id="tab-garage-btn" class="tab-btn active" onclick="switchTab('garage')">🏎️ ガレージ</button>
+                <button id="tab-warehouse-btn" class="tab-btn" onclick="switchTab('warehouse')">📦 倉庫</button>
+                <button id="tab-history-btn" class="tab-btn" onclick="switchTab('history')">🔧 セッティング履歴</button>
+                <button id="tab-runlog-btn" class="tab-btn" onclick="switchTab('runlog')">⏱️ 走行ログ</button>
+                <button id="tab-signal-btn" class="tab-btn" onclick="switchTab('signal')">🚦 シグナル</button>
+            </div>
+        </header>
+
+        <div id="tab-garage" class="grid">
+            <div class="card">
+                <h2 class="list-title">🛠️ 新しいマシンを組む</h2>
+                <form id="machine-form" onsubmit="addMachine(event)">
+                    <div class="form-group">
+                        <label>マシン名</label>
+                        <input type="text" id="m-name" placeholder="例: アバンテ Mk.III" required>
+                    </div>
+                    <div class="form-group">
+                        <label>シャーシ</label>
+                        <select id="m-chassis">
+                            <option value="MSフレキ">MSフレキ</option>
+                            <option value="VZ">VZ</option>
+                            <option value="MA">MA</option>
+                            <option value="FM-A">FM-A</option>
+                            <option value="AR">AR</option>
+                            <option value="Super-II">Super-II</option>
+                            <option value="その他">その他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>モーター</label>
+                        <input type="text" id="m-motor" placeholder="例: マッハダッシュPRO">
+                    </div>
+                    <div class="form-group">
+                        <label>マシン写真</label>
+                        <label class="file-input-wrapper">
+                            📷 写真を選択 / カメラを起動
+                            <input type="file" id="m-image" accept="image/*" onchange="previewUploadedImage(this, 'form-m-img-preview', 'm')">
+                        </label>
+                        <img id="form-m-img-preview" class="image-preview-thumbnail">
+                    </div>
+                    <div class="form-group">
+                        <label>メモ・初期セッティング状況</label>
+                        <textarea id="m-memo" placeholder="例: フロントAT、リアアンカー" style="height: 80px;"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-red">ガレージに登録する</button>
+                </form>
+            </div>
+            <div>
+                <h2 class="list-title">🏁 所属マシン一覧</h2>
+                <div id="machine-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-warehouse" class="grid hidden">
+            <div class="card">
+                <h2 class="list-title">📥 パーツを倉庫に入れる</h2>
+                <form id="part-form" onsubmit="addPart(event)">
+                    <div class="form-group">
+                        <label>パーツ名</label>
+                        <input type="text" id="p-name" placeholder="例: 13mm ベアリングローラー" required>
+                    </div>
+                    <div class="form-group">
+                        <label>カテゴリ</label>
+                        <select id="p-category">
+                            <option value="ローラー">ローラー</option>
+                            <option value="モーター">モーター</option>
+                            <option value="ステー・プレート">ステー・プレート</option>
+                            <option value="タイヤ・ホイール">タイヤ・ホイール</option>
+                            <option value="ギヤ・シャフト">ギヤ・シャフト</option>
+                            <option value="マスダンパー・錘">マスダンパー・錘</option>
+                            <option value="その他">その他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>パーツ写真</label>
+                        <label class="file-input-wrapper">
+                            📷 写真を選択 / カメラを起動
+                            <input type="file" id="p-image" accept="image/*" onchange="previewUploadedImage(this, 'form-p-img-preview', 'p')">
+                        </label>
+                        <img id="form-p-img-preview" class="image-preview-thumbnail">
+                    </div>
+                    <div class="form-group">
+                        <label>初期の在庫数</label>
+                        <input type="number" id="p-count" min="0" value="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-blue">倉庫に保管する</button>
+                </form>
+            </div>
+            <div>
+                <h2 class="list-title">📦 在庫パーツ一覧</h2>
+                <div id="part-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-history" class="grid hidden">
+            <div class="card">
+                <h2 class="list-title">🔧 変更内容を記録する</h2>
+                <form id="history-form" onsubmit="addHistory(event)">
+                    <div class="form-group">
+                        <label>対象マシン</label>
+                        <select id="h-machine" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>カスタム・変更内容</label>
+                        <input type="text" id="h-title" placeholder="例: リアローラーを19mmプラリングに変更" required>
+                    </div>
+                    <div class="form-group">
+                        <label>変更箇所の写真（ズーム撮影がおすすめ）</label>
+                        <label class="file-input-wrapper">
+                            📷 写真を選択 / カメラを起動
+                            <input type="file" id="h-image" accept="image/*" onchange="previewUploadedImage(this, 'form-h-img-preview', 'h')">
+                        </label>
+                        <img id="form-h-img-preview" class="image-preview-thumbnail">
+                    </div>
+                    <div class="form-group">
+                        <label>詳しい目的・調整メモ</label>
+                        <textarea id="h-note" placeholder="例: デジタルカーブでの減速を抑えるため。LCでのスタビ頭の高さも1mm下げた。" style="height: 80px;"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-purple">変更履歴を保存する</button>
+                </form>
+            </div>
+            <div>
+                <h2 class="list-title">⏳ 改造・セッティングタイムライン</h2>
+                <div id="history-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-runlog" class="grid hidden">
+            <div>
+                <div class="card">
+                    <h2 class="list-title">⏱️ 走行データを記録</h2>
+                    <form id="runlog-form" onsubmit="addRunLog(event)">
+                        <div class="form-group">
+                            <label>走行させたマシン</label>
+                            <select id="r-machine" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>サーキット・コース名</label>
+                            <input type="text" id="r-course" placeholder="例: 〇〇店" required>
+                        </div>
+                        <div class="form-group">
+                            <label>結果</label>
+                            <div class="radio-tile-group">
+                                <input type="radio" id="res-success" name="r-result" value="完走" checked onclick="toggleResultForm('完走')">
+                                <label for="res-success" class="radio-tile-label">🟢 完走</label>
+                                <input type="radio" id="res-co" name="r-result" value="CO" onclick="toggleResultForm('CO')">
+                                <label for="res-co" class="radio-tile-label">🔴 CO</label>
+                            </div>
+                        </div>
+                        <div class="form-group" id="form-time-input">
+                            <label>タイム (秒)</label>
+                            <input type="text" id="r-time" placeholder="例: 24.32">
+                        </div>
+                        <div class="form-group">
+                            <label>備考・COの理由など</label>
+                            <textarea id="r-note" placeholder="例: LCでアウトリフト" style="height: 60px;"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-green">走行データを保存</button>
+                    </form>
+                </div>
+            </div>
+            <div>
+                <div class="stats-container">
+                    <div class="stat-card highlight"><div class="stat-lbl">総合完走率</div><div id="stat-rate" class="stat-val">0%</div></div>
+                    <div class="stat-card"><div class="stat-lbl">総走行回数</div><div id="stat-total" class="stat-val">0回</div></div>
+                    <div class="stat-card"><div class="stat-lbl">完走</div><div id="stat-success" class="stat-val" style="color: #10b981;">0回</div></div>
+                    <div class="stat-card"><div class="stat-lbl">CO</div><div id="stat-co" class="stat-val" style="color: #ef4444;">0回</div></div>
+                </div>
+                <h2 class="list-title">📊 走行ログ履歴</h2>
+                <div id="runlog-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-signal" class="single-layout hidden">
+            <div class="signal-card">
+                <h2 class="list-title" style="color: white; justify-content: center; margin-bottom: 24px;">🚦 RACE SIGNAL</h2>
+                <div class="signal-box">
+                    <div id="light-1" class="light"></div>
+                    <div id="light-2" class="light"></div>
+                    <div id="light-3" class="light"></div>
+                </div>
+                <button id="signal-start-btn" type="button" class="signal-btn" onclick="startSignalCountdown()">READY / START</button>
+                <div id="sw-time" class="sw-display">00:00.00</div>
+                <div class="sw-controls">
+                    <button type="button" class="sw-btn sw-btn-stop" onclick="stopStopwatch()">🛑 STOP</button>
+                    <button type="button" class="sw-btn sw-btn-reset" onclick="resetStopwatch()">🔄 RESET</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // バージョンをv6へ更新して保存データを統一
+        let machines = JSON.parse(localStorage.getItem('m4wd_v6_machines')) || [];
+        let parts = JSON.parse(localStorage.getItem('m4wd_v6_parts')) || [];
+        let runLogs = JSON.parse(localStorage.getItem('m4wd_v6_runlogs')) || [];
+        let histories = JSON.parse(localStorage.getItem('m4wd_v6_histories')) || []; // ★新データ
+        
+        let temporaryMachineImgBase64 = ""; 
+        let temporaryPartImgBase64 = ""; 
+        let temporaryHistoryImgBase64 = ""; // ★新画像保持用
+
+        let swInterval = null; let startTime = 0; let elapsedTime = 0;
+
+        function switchTab(tab) {
+            const tabs = ['garage', 'warehouse', 'history', 'runlog', 'signal'];
+            tabs.forEach(t => {
+                const element = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tab-${t}-btn`);
+                if (t === tab) {
+                    if (element) element.classList.remove('hidden');
+                    if (btn) btn.classList.add('active');
+                } else {
+                    if (element) element.classList.add('hidden');
+                    if (btn) btn.classList.remove('active');
+                }
+            });
+            render();
+        }
+
+        function toggleResultForm(status) {
+            const timeInput = document.getElementById('form-time-input');
+            const timeField = document.getElementById('r-time');
+            if (!timeInput || !timeField) return;
+            if (status === '完走') {
+                timeInput.classList.remove('hidden'); timeField.setAttribute('required', 'required');
+            } else {
+                timeInput.classList.add('hidden'); timeField.removeAttribute('required'); timeField.value = '';
+            }
+        }
+
+        function previewUploadedImage(input, previewId, type) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const max_size = 500; 
+                        let width = img.width; let height = img.height;
+                        if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } } 
+                        else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const base64Result = canvas.toDataURL('image/jpeg', 0.65);
+                        if (type === 'm') temporaryMachineImgBase64 = base64Result;
+                        if (type === 'p') temporaryPartImgBase64 = base64Result;
+                        if (type === 'h') temporaryHistoryImgBase64 = base64Result; // ★履歴用画像
+                        
+                        if (preview) { preview.src = base64Result; preview.style.display = 'block'; }
+                    }
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        /* 音声・シグナル関係 */
+        let audioCtx = null;
+        function playTone(freq, duration) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + duration);
+            } catch (e) { console.log("Audio block"); }
+        }
+
+        function startSignalCountdown() {
+            const btn = document.getElementById('signal-start-btn');
+            const l1 = document.getElementById('light-1'); const l2 = document.getElementById('light-2'); const l3 = document.getElementById('light-3');
+            resetStopwatch();
+            if (btn) btn.disabled = true;
+            [l1, l2, l3].forEach(l => { if(l) l.className = 'light'; });
+            setTimeout(() => { if(l1) l1.classList.add('red'); playTone(440, 0.1); }, 1000);
+            setTimeout(() => { if(l2) l2.classList.add('red'); playTone(440, 0.1); }, 2000);
+            setTimeout(() => { if(l3) l3.classList.add('red'); playTone(440, 0.1); }, 3000);
+            setTimeout(() => {
+                [l1, l2, l3].forEach(l => { if(l) { l.classList.remove('red'); l.classList.add('green'); } });
+                playTone(880, 0.3); if (btn) btn.innerText = "GO !!!"; startStopwatch();
+            }, 4000);
+            setTimeout(() => {
+                [l1, l2, l3].forEach(l => { if(l) l.className = 'light'; });
+                if (btn) btn.disabled = false; if (btn) btn.innerText = "READY / START";
+            }, 6000);
+        }
+
+        function startStopwatch() { if (swInterval) return; startTime = Date.now() - elapsedTime; swInterval = setInterval(updateStopwatchDisplay, 10); }
+        function stopStopwatch() { clearInterval(swInterval); swInterval = null; }
+        function resetStopwatch() { stopStopwatch(); elapsedTime = 0; const display = document.getElementById('sw-time'); if (display) display.innerText = "00:00.00"; }
+        function updateStopwatchDisplay() {
+            elapsedTime = Date.now() - startTime;
+            const ms = Math.floor((elapsedTime % 1000) / 10); const totalSeconds = Math.floor(elapsedTime / 1000);
+            const seconds = totalSeconds % 60; const minutes = Math.floor(totalSeconds / 60);
+            const display = document.getElementById('sw-time');
+            if (display) display.innerText = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}.${String(ms).padStart(2,'0')}`;
+        }
+
+        /* データ追加系 */
+        function addMachine(e) {
+            e.preventDefault();
+            const name = document.getElementById('m-name').value;
+            const chassis = document.getElementById('m-chassis').value;
+            const motor = document.getElementById('m-motor').value || '未設定';
+            const memo = document.getElementById('m-memo').value || 'メモはありません。';
+            const image = temporaryMachineImgBase64 || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80";
+
+            machines.push({ id: Date.now(), name, chassis, motor, memo, image });
+            localStorage.setItem('m4wd_v6_machines', JSON.stringify(machines));
+            document.getElementById('machine-form').reset();
+            if(document.getElementById('form-m-img-preview')) document.getElementById('form-m-img-preview').style.display = 'none';
+            temporaryMachineImgBase64 = ""; render();
+        }
+
+        function deleteMachine(id) {
+            if (confirm('このマシンを削除しますか？')) {
+                machines = machines.filter(m => m.id !== id);
+                localStorage.setItem('m4wd_v6_machines', JSON.stringify(machines));
+                render();
+            }
+        }
+
+        function addPart(e) {
+            e.preventDefault();
+            const name = document.getElementById('p-name').value;
+            const category = document.getElementById('p-category').value;
+            const count = parseInt(document.getElementById('p-count').value) || 0;
+            const image = temporaryPartImgBase64 || "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=600&q=80";
+
+            parts.push({ id: Date.now(), name, category, count, image });
+            localStorage.setItem('m4wd_v6_parts', JSON.stringify(parts));
+            document.getElementById('part-form').reset();
+            if(document.getElementById('form-p-img-preview')) document.getElementById('form-p-img-preview').style.display = 'none';
+            temporaryPartImgBase64 = ""; render();
+        }
+
+        function updateCount(id, amount) {
+            parts = parts.map(p => (p.id === id) ? { ...p, count: (p.count + amount >= 0 ? p.count + amount : 0) } : p);
+            localStorage.setItem('m4wd_v6_parts', JSON.stringify(parts));
+            render();
+        }
+
+        function deletePart(id) {
+            if (confirm('このパーツを倉庫から削除しますか？')) {
+                parts = parts.filter(p => p.id !== id);
+                localStorage.setItem('m4wd_v6_parts', JSON.stringify(parts));
+                render();
+            }
+        }
+
+        /* ★新機能: セッティング履歴の追加 */
+        function addHistory(e) {
+            e.preventDefault();
+            const machineId = document.getElementById('h-machine').value;
+            if (!machineId) { alert('先にマシンを登録してください。'); return; }
+            const machine = machines.find(m => m.id == machineId);
+            const machineName = machine ? machine.name : '不明のマシン';
+            
+            const title = document.getElementById('h-title').value;
+            const note = document.getElementById('h-note').value || '詳細メモなし';
+            const image = temporaryHistoryImgBase64 || "https://images.unsplash.com/photo-1517420728092-a24a1ee3437c?auto=format&fit=crop&w=600&q=80"; // デフォルト工具風画像
+            
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+
+            histories.unshift({ id: Date.now(), machineName, title, note, image, date: dateStr });
+            localStorage.setItem('m4wd_v6_histories', JSON.stringify(histories));
+            
+            document.getElementById('history-form').reset();
+            if(document.getElementById('form-h-img-preview')) document.getElementById('form-h-img-preview').style.display = 'none';
+            temporaryHistoryImgBase64 = ""; render();
+        }
+
+        function deleteHistory(id) {
+            if (confirm('このセッティング履歴を削除しますか？')) {
+                histories = histories.filter(h => h.id !== id);
+                localStorage.setItem('m4wd_v6_histories', JSON.stringify(histories));
+                render();
+            }
+        }
+
+        function addRunLog(e) {
+            e.preventDefault();
+            const machineId = document.getElementById('r-machine').value;
+            if (!machineId) { alert('先にマシンを登録してください。'); return; }
+            const machine = machines.find(m => m.id == machineId);
+            const machineName = machine ? machine.name : '不明のマシン';
+            const course = document.getElementById('r-course').value;
+            const result = document.querySelector('input[name="r-result"]:checked').value;
+            const time = document.getElementById('r-time').value;
+            const note = document.getElementById('r-note').value || '特記事項なし';
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+            runLogs.unshift({ id: Date.now(), machineName, course, result, time, note, date: dateStr });
+            localStorage.setItem('m4wd_v6_runlogs', JSON.stringify(runLogs));
+            document.getElementById('runlog-form').reset(); toggleResultForm('完走'); render();
+        }
+
+        function deleteRunLog(id) {
+            if (confirm('この走行ログを削除しますか？')) {
+                runLogs = runLogs.filter(r => r.id !== id);
+                localStorage.setItem('m4wd_v6_runlogs', JSON.stringify(runLogs));
+                render();
+            }
+        }
+
+        function calculateStats() {
+            const total = runLogs.length; const success = runLogs.filter(r => r.result === '完走').length; const co = total - success;
+            const rate = total > 0 ? Math.round((success / total) * 100) : 0;
+            if(document.getElementById('stat-rate')) document.getElementById('stat-rate').innerText = `${rate}%`;
+            if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = `${total}回`;
+            if(document.getElementById('stat-success')) document.getElementById('stat-success').innerText = `${success}回`;
+            if(document.getElementById('stat-co')) document.getElementById('stat-co').innerText = `${co}回`;
+        }
+
+        function render() {
+            calculateStats();
+
+            // 1. マシンリスト
+            const machineList = document.getElementById('machine-list');
+            if (machineList) {
+                machineList.innerHTML = machines.length === 0 ? '<div class="empty-state">登録されているマシンがありません。</div>' : machines.map(m => `
+                        <div class="item-box">
+                            <div class="item-header">
+                                <div><span class="badge">${m.chassis}</span><strong>${m.name}</strong></div>
+                                <button class="delete-btn" onclick="deleteMachine(${m.id})">削除</button>
+                            </div>
+                            <div class="card-img-box"><img src="${m.image}" class="card-img" alt="machine"></div>
+                            <div class="item-body">
+                                <div class="info-row"><span class="info-label">モーター:</span><span class="motor-tag">${m.motor}</span></div>
+                                <div style="border-top: 1px solid #f1f5f9; padding-top: 8px;"><span class="info-label">初期メモ:</span><div class="memo-box">${m.memo}</div></div>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+
+            // 2. パーツリスト
+            const partList = document.getElementById('part-list');
+            if (partList) {
+                partList.innerHTML = parts.length === 0 ? '<div class="empty-state">倉庫は空っぽです。</div>' : parts.map(p => `
+                        <div class="item-box">
+                            <div class="item-header" style="background-color: #475569;">
+                                <div><span class="badge-cat">${p.category}</span> <strong style="margin-left:6px;">${p.name}</strong></div>
+                                <button class="delete-btn" style="color:#cbd5e1;" onclick="deletePart(${p.id})">🗑️</button>
+                            </div>
+                            <div class="card-img-box" style="max-height: 140px;"><img src="${p.image}" class="card-img" style="height: 140px;" alt="part"></div>
+                            <div class="part-card-body">
+                                <div style="font-size:12px; color:#64748b; font-weight:bold;">在庫数</div>
+                                <div class="counter"><button class="count-btn" onclick="updateCount(${p.id}, -1)">-</button><span class="count-num">${p.count}</span><button class="count-btn" onclick="updateCount(${p.id}, 1)">+</button></div>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+
+            // 3. マシンドロップダウンの連動（走行ログ・履歴共通）
+            const mOptions = machines.length === 0 ? '<option value="">先にマシンを登録してください</option>' : machines.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+            if (document.getElementById('r-machine')) document.getElementById('r-machine').innerHTML = mOptions;
+            if (document.getElementById('h-machine')) document.getElementById('h-machine').innerHTML = mOptions;
+
+            // 4. ★セッティング履歴リストのレンダリング
+            const historyList = document.getElementById('history-list');
+            if (historyList) {
+                historyList.innerHTML = histories.length === 0 ? '<div class="empty-state">セッティング変更履歴がまだありません。</div>' : histories.map(h => `
+                        <div class="item-box" style="border-left: 4px solid #7c3aed;">
+                            <div class="item-header" style="background-color: #6d28d9;">
+                                <div><span style="background-color:#1e293b; font-size:11px; padding:2px 6px; border-radius:4px; margin-right:6px;">${h.date}</span><strong>${h.machineName}</strong></div>
+                                <button class="delete-btn" style="color:#cbd5e1;" onclick="deleteHistory(${h.id})">削除</button>
+                            </div>
+                            <div class="card-img-box" style="max-height: 180px;"><img src="${h.image}" class="card-img" style="height: 180px;" alt="history"></div>
+                            <div class="item-body">
+                                <div style="font-weight: bold; font-size: 15px; color: #1e293b; margin-bottom: 6px;">🔧 ${h.title}</div>
+                                <div class="memo-box" style="background-color: #faf5ff; border: 1px solid #f3e8ff;">${h.note}</div>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+
+            // 5. 走行ログ履歴
+            const runLogList = document.getElementById('runlog-list');
+            if (runLogList) {
+                runLogList.innerHTML = runLogs.length === 0 ? '<div class="empty-state">走行データがありません。</div>' : runLogs.map(r => `
+                            <div class="item-box">
+                                <div class="item-header" style="background-color: #334155;">
+                                    <div><strong>${r.machineName}</strong><span style="font-size: 12px; color: #cbd5e1; margin-left: 8px;">@ ${r.course}</span></div>
+                                    <button class="delete-btn" onclick="deleteRunLog(${r.id})">削除</button>
+                                </div>
+                                <div class="item-body">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        ${r.result === '完走' ? '<span class="badge-success">🟢 完走</span>' : '<span class="badge-danger">🔴 CO</span>'}
+                                        ${r.result === '完走' ? `<span class="time-display">${r.time} 秒</span>` : '<span class="time-display" style="color: #ef4444;">コースアウト</span>'}
+                                    </div>
+                                    <div class="memo-box">${r.note}</div>
+                                    <div class="date-text">${r.date}</div>
+                                </div>
+                            </div>
+                        `).join('');
+            }
+        }
+
+        render(); toggleResultForm('完走');
+    </script>
+</body>
+</html>
+<script>
+    // 編集モード用の状態変数
+    let editingMachineId = null;
+
+    function render() {
+        calculateStats();
+
+        // 1. マシンリスト (編集ボタンを追加)
+        const machineList = document.getElementById('machine-list');
+        if (machineList) {
+            machineList.innerHTML = machines.length === 0 ? '<div class="empty-state">登録されているマシンがありません。</div>' : machines.map(m => `
+                <div class="item-box">
+                    <div class="item-header">
+                        <div><span class="badge">${m.chassis}</span><strong>${m.name}</strong></div>
+                        <div>
+                            <button class="delete-btn" style="color: #60a5fa; margin-right: 12px;" onclick="editMachine(${m.id})">編集</button>
+                            <button class="delete-btn" onclick="deleteMachine(${m.id})">削除</button>
+                        </div>
+                    </div>
+                    <div class="card-img-box"><img src="${m.image}" class="card-img" alt="machine"></div>
+                    <div class="item-body">
+                        <div class="info-row"><span class="info-label">モーター:</span><span class="motor-tag">${m.motor}</span></div>
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 8px;"><span class="info-label">メモ:</span><div class="memo-box">${m.memo}</div></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        // ...以下パーツ、履歴、ログのレンダリングは前回通り
+    }
+
+    // 編集ボタンが押された時の処理
+    function editMachine(id) {
+        const machine = machines.find(m => m.id === id);
+        if (!machine) return;
+
+        // フォームに値をセット
+        document.getElementById('m-name').value = machine.name;
+        document.getElementById('m-chassis').value = machine.chassis;
+        document.getElementById('m-motor').value = machine.motor;
+        document.getElementById('m-memo').value = machine.memo;
+        
+        // プレビュー画像を表示
+        const preview = document.getElementById('form-m-img-preview');
+        preview.src = machine.image;
+        preview.style.display = 'block';
+        
+        // 編集モードを有効化
+        editingMachineId = id;
+        
+        // フォームタイトルを少し強調（オプション）
+        document.querySelector('#machine-form .list-title').innerText = "🛠️ マシン情報を編集中...";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // マシン保存処理の修正（新規作成 or 編集の分岐）
+    function addMachine(e) {
+        e.preventDefault();
+        const name = document.getElementById('m-name').value;
+        const chassis = document.getElementById('m-chassis').value;
+        const motor = document.getElementById('m-motor').value || '未設定';
+        const memo = document.getElementById('m-memo').value || 'メモはありません。';
+        const image = temporaryMachineImgBase64 || document.getElementById('form-m-img-preview').src;
+
+        if (editingMachineId) {
+            // 編集の場合
+            machines = machines.map(m => m.id === editingMachineId ? { id: editingMachineId, name, chassis, motor, memo, image } : m);
+            editingMachineId = null;
+            document.querySelector('#machine-form .list-title').innerText = "🛠️ 新しいマシンを組む";
+        } else {
+            // 新規作成の場合
+            machines.push({ id: Date.now(), name, chassis, motor, memo, image });
+        }
+
+        localStorage.setItem('m4wd_v6_machines', JSON.stringify(machines));
+        document.getElementById('machine-form').reset();
+        document.getElementById('form-m-img-preview').style.display = 'none';
+        temporaryMachineImgBase64 = ""; 
+        render();
+    }
+</script>
